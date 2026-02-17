@@ -47,7 +47,6 @@ export const Board = () => {
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-100 to-blue-200">
       <header className="relative flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600 text-white p-8 shadow-md">
         <div className="max-w-6xl w-full mx-auto text-center">
-          <h1 className="text-4xl font-bold mb-1 -tracking-wider">Flow</h1>
           <p className="text-lg opacity-90 font-light">Kanban Board</p>
         </div>
         <button
