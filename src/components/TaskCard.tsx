@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Task } from "@/types";
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
 interface TaskCardProps {
   task: Task;
@@ -20,12 +21,16 @@ export const TaskCard = ({
 }: TaskCardProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm("Are you sure you want to delete this task?")) {
-      onTaskDelete?.(task.id);
-    }
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
+    setShowDeleteConfirm(false);
+    onTaskDelete?.(task.id);
   };
 
   return (
@@ -65,7 +70,7 @@ export const TaskCard = ({
               </button>
               <button
                 className="bg-none border-none p-0 cursor-pointer text-lg opacity-70 hover:opacity-100 transition-opacity flex items-center justify-center"
-                onClick={handleDelete}
+                onClick={handleDeleteClick}
                 aria-label="Delete task"
                 title="Delete"
               >
@@ -76,6 +81,13 @@ export const TaskCard = ({
         </div>
       </div>
       <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{task.description}</p>
+
+      <DeleteConfirmationModal
+        isOpen={showDeleteConfirm}
+        taskTitle={task.title}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 };

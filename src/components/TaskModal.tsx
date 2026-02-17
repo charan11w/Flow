@@ -1,33 +1,43 @@
 import { useState, useEffect } from "react";
 import { Task } from "@/types";
 import { useBoard } from "@/context/BoardContext";
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
 interface TaskModalProps {
   task: Task;
   isOpen: boolean;
   onClose: () => void;
+  openInEditMode?: boolean;
 }
 
-export const TaskModal = ({ task, isOpen, onClose }: TaskModalProps) => {
+export const TaskModal = ({ task, isOpen, onClose, openInEditMode = false }: TaskModalProps) => {
   const { dispatch } = useBoard();
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(openInEditMode);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setTitle(task.title);
       setDescription(task.description);
-      setIsEditing(false);
+      setIsEditing(openInEditMode);
       setError(null);
     }
-  }, [isOpen, task]);
+  }, [isOpen, task, openInEditMode]);
 
   if (!isOpen) return null;
 
+  const hasChanges = title !== task.title || description !== task.description;
+
   const handleSave = (): void => {
     setError(null);
+
+    if (!hasChanges) {
+      setError("Have not done any changes");
+      return;
+    }
 
     if (!title.trim()) {
       setError("Task title is required");
@@ -58,25 +68,27 @@ export const TaskModal = ({ task, isOpen, onClose }: TaskModalProps) => {
       },
     });
 
-    setIsEditing(false);
+    onClose();
   };
 
-  const handleDelete = (): void => {
-    if (confirm("Are you sure you want to delete this task?")) {
-      dispatch({ type: "DELETE_TASK", payload: task.id });
+  const handleConfirmDelete = () => {
+    setShowDeleteConfirm(false);
+    dispatch({ type: "DELETE_TASK", payload: task.id });
+    onClose();
+  };
+
+  const handleExit = (): void => {
+    if (isEditing && hasChanges) {
+      if (confirm("You have unsaved changes. Are you sure you want to discard them?")) {
+        onClose();
+      }
+    } else {
       onClose();
     }
   };
 
-  const handleCancel = (): void => {
-    setTitle(task.title);
-    setDescription(task.description);
-    setIsEditing(false);
-    setError(null);
-  };
-
   const formattedDate = new Date(task.createdAt).toLocaleDateString("en-US", {
-    month: "long",
+    month: "short",
     day: "numeric",
     year: "numeric",
     hour: "2-digit",
@@ -84,133 +96,151 @@ export const TaskModal = ({ task, isOpen, onClose }: TaskModalProps) => {
   });
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn" onClick={onClose} role="presentation">
+    <>
       <div
-        className="bg-white rounded-lg shadow-2xl max-w-xl w-11/12 max-h-96 overflow-y-auto relative animate-slideUp"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn"
+        onClick={handleExit}
+        role="presentation"
       >
-        <button
-          className="absolute top-4 right-4 bg-transparent text-gray-400 border-none text-3xl leading-none w-10 h-10 flex items-center justify-center cursor-pointer rounded hover:bg-gray-100 hover:text-gray-800 transition-all z-50"
-          onClick={onClose}
-          aria-label="Close modal"
-          title="Close"
+        <div
+          className="bg-white rounded-lg shadow-2xl max-w-2xl w-11/12 max-h-[90vh] overflow-y-auto relative animate-slideUp flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
         >
-          ×
-        </button>
-
-        <div className="px-6 pt-6 pb-4 border-b border-gray-300 flex items-baseline justify-between gap-4">
-          <h2 id="modal-title" className="text-xl font-semibold text-gray-900">
-            {isEditing ? "Edit Task" : "Task Details"}
-          </h2>
-          <span className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0 font-medium">{formattedDate}</span>
-        </div>
-
-        {error && (
-          <div className="mx-4 mt-4 bg-red-50 border border-red-300 text-red-800 px-3.5 py-3 rounded text-sm animate-shake" role="alert">
-            {error}
+          {/* Header */}
+          <div className="sticky top-0 z-40 bg-white px-8 pt-8 pb-6 border-b border-gray-200 flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h2 id="modal-title" className="text-3xl font-bold text-gray-900">
+                {isEditing ? "Edit Task" : "Task Details"}
+              </h2>
+              <p className="text-sm text-gray-500 mt-2 font-medium">{formattedDate}</p>
+            </div>
+            <button
+              className="flex-shrink-0 bg-transparent text-gray-400 border-none text-3xl leading-none w-10 h-10 flex items-center justify-center cursor-pointer rounded hover:bg-gray-100 hover:text-gray-800 transition-all"
+              onClick={handleExit}
+              aria-label="Close modal"
+              title="Close"
+            >
+              ×
+            </button>
           </div>
-        )}
 
-        <div className="p-6">
-          {isEditing ? (
-            <>
-              <div className="mb-6 flex flex-col gap-2">
-                <label htmlFor="modal-title-input" className="text-sm font-medium text-gray-800">
-                  Title
-                </label>
-                <input
-                  id="modal-title-input"
-                  type="text"
-                  className="px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-300 transition-colors"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  maxLength={100}
-                />
-                <span className="text-xs text-gray-500 text-right">
-                  {title.length}/{100}
-                </span>
-              </div>
-
-              <div className="mb-6 flex flex-col gap-2">
-                <label htmlFor="modal-description-input" className="text-sm font-medium text-gray-800">
-                  Description
-                </label>
-                <textarea
-                  id="modal-description-input"
-                  className="px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-300 transition-colors"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  maxLength={500}
-                  rows={5}
-                />
-                <span className="text-xs text-gray-500 text-right">
-                  {description.length}/{500}
-                </span>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="mb-6">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2 block">Title</label>
-                <p className="text-sm text-gray-900 leading-relaxed">{task.title}</p>
-              </div>
-
-              <div className="mb-6">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2 block">Description</label>
-                <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap break-words">{task.description}</p>
-              </div>
-
-              <div className="mb-6">
-                <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2 block">Column</label>
-                <p className="text-sm text-gray-900">
-                  {task.column === "todo"
-                    ? "To Do"
-                    : task.column === "inProgress"
-                      ? "In Progress"
-                      : "Done"}
-                </p>
-              </div>
-            </>
+          {/* Error Message */}
+          {error && (
+            <div
+              className="mx-8 mt-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm animate-shake font-medium"
+              role="alert"
+            >
+              {error}
+            </div>
           )}
-        </div>
 
-        <div className="flex gap-3 px-6 py-6 border-t border-gray-300 justify-end">
-          {isEditing ? (
-            <>
-              <button
-                className="px-5 py-2 bg-gray-100 text-gray-800 border border-gray-300 rounded text-sm font-medium hover:bg-gray-200 transition-colors cursor-pointer"
-                onClick={handleCancel}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-5 py-2 bg-gray-800 text-white border border-gray-800 rounded text-sm font-medium hover:bg-gray-700 transition-colors cursor-pointer"
-                onClick={handleSave}
-              >
-                Save Changes
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className="px-5 py-2 bg-gray-100 text-gray-800 border border-gray-300 rounded text-sm font-medium hover:bg-gray-200 transition-colors cursor-pointer"
-                onClick={handleDelete}
-              >
-                Delete Task
-              </button>
-              <button
-                className="px-5 py-2 bg-gray-800 text-white border border-gray-800 rounded text-sm font-medium hover:bg-gray-700 transition-colors cursor-pointer"
-                onClick={() => setIsEditing(true)}
-              >
-                Edit Task
-              </button>
-            </>
-          )}
+          {/* Content */}
+          <div className="flex-1 p-8">
+            {isEditing ? (
+              <>
+                {/* Edit Mode */}
+                <div className="mb-8 flex flex-col gap-3">
+                  <label htmlFor="modal-title-input" className="text-sm font-bold text-gray-900">
+                    Title
+                  </label>
+                  <input
+                    id="modal-title-input"
+                    type="text"
+                    className="px-4 py-3 border border-gray-300 rounded-lg text-base focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-300 focus:ring-opacity-50 transition-all"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    maxLength={100}
+                    autoFocus
+                  />
+                  <span className="text-xs text-gray-500 text-right">
+                    {title.length}/100 characters
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <label htmlFor="modal-description-input" className="text-sm font-bold text-gray-900">
+                    Description
+                  </label>
+                  <textarea
+                    id="modal-description-input"
+                    className="px-4 py-3 border border-gray-300 rounded-lg text-base focus:outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-300 focus:ring-opacity-50 transition-all resize-none"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    maxLength={500}
+                    rows={10}
+                  />
+                  <span className="text-xs text-gray-500 text-right">
+                    {description.length}/500 characters
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* View Mode */}
+                <div className="mb-10">
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Title</h3>
+                  <p className="text-xl font-semibold text-gray-800 leading-relaxed">{task.title}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Description</h3>
+                  <p className="text-base text-gray-700 leading-relaxed whitespace-pre-wrap break-words">{task.description}</p>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="sticky bottom-0 z-40 bg-white border-t border-gray-200 px-8 py-6 flex gap-3 justify-end">
+            {isEditing ? (
+              <>
+                <button
+                  className="px-7 py-3 bg-white text-gray-700 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all cursor-pointer"
+                  onClick={handleExit}
+                >
+                  Exit
+                </button>
+                <button
+                  className={`px-7 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
+                    hasChanges
+                      ? "bg-gray-900 text-white hover:bg-gray-800"
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  }`}
+                  onClick={handleSave}
+                  disabled={!hasChanges}
+                >
+                  Save
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="px-7 py-3 bg-white text-red-600 border border-red-200 rounded-lg text-sm font-semibold hover:bg-red-50 hover:border-red-300 transition-all cursor-pointer"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  Delete
+                </button>
+                <button
+                  className="px-7 py-3 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-all cursor-pointer"
+                  onClick={() => setIsEditing(true)}
+                >
+                  Edit
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      <DeleteConfirmationModal
+        isOpen={showDeleteConfirm}
+        taskTitle={task.title}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
+    </>
   );
 };
