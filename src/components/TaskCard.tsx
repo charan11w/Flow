@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Task } from "@/types";
-import "@/styles/TaskCard.css";
 
 interface TaskCardProps {
   task: Task;
@@ -31,7 +30,9 @@ export const TaskCard = ({
 
   return (
     <div
-      className={`task-card ${isDragging ? "dragging" : ""}`}
+      className={`bg-white rounded p-4 shadow-sm transition-all cursor-grab select-none flex flex-col gap-2 h-fit ${
+        isDragging ? "opacity-100 cursor-grabbing bg-white shadow-lg rotate-1" : "hover:shadow-md hover:bg-gray-50"
+      }`}
       role="article"
       aria-label={`Task: ${task.title}`}
       draggable
@@ -46,33 +47,35 @@ export const TaskCard = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="task-card-header">
-        <h3 className="task-card-title">{task.title}</h3>
-        {isHovered && (
-          <div className="task-card-actions">
-            <button
-              className="task-card-edit-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                onTaskClick(task);
-              }}
-              aria-label="Edit task"
-              title="Edit"
-            >
-              ✏️
-            </button>
-            <button
-              className="task-card-delete-btn"
-              onClick={handleDelete}
-              aria-label="Delete task"
-              title="Delete"
-            >
-              🗑️
-            </button>
-          </div>
-        )}
+      <div className="flex items-start justify-between gap-2 min-h-8">
+        <h3 className="font-semibold text-gray-800 text-sm leading-snug line-clamp-2">{task.title}</h3>
+        <div className="flex gap-1 items-center flex-shrink-0 w-16 justify-end">
+          {isHovered && (
+            <>
+              <button
+                className="bg-none border-none p-0 cursor-pointer text-lg opacity-70 hover:opacity-100 transition-opacity flex items-center justify-center"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTaskClick(task);
+                }}
+                aria-label="Edit task"
+                title="Edit"
+              >
+                ✏️
+              </button>
+              <button
+                className="bg-none border-none p-0 cursor-pointer text-lg opacity-70 hover:opacity-100 transition-opacity flex items-center justify-center"
+                onClick={handleDelete}
+                aria-label="Delete task"
+                title="Delete"
+              >
+                🗑️
+              </button>
+            </>
+          )}
+        </div>
       </div>
-      <p className="task-card-description">{task.description}</p>
+      <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{task.description}</p>
     </div>
   );
 };
